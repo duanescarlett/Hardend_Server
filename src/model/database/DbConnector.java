@@ -17,7 +17,7 @@ public class DbConnector {
     public static Statement mySql;
     public static ResultSet sql = null;
 
-    DbConnector()  {
+    private DbConnector()  {
         try {
             // 1. Get db connection
             this.con = DriverManager.getConnection(URL, USER, PASS);

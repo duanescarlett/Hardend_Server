@@ -1,21 +1,14 @@
 import model.UserMod;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
-/**
- *
- * @author eric
- *
- * https://www.youtube.com/user/thepoorMechanic
- *
- * Highly Scalable Server with Java NIO (part 1) https://www.youtube.com/watch?v=nUI4zO6abH0
- * Highly Scalable Server with Java NIO (part 2) https://www.youtube.com/watch?v=AofvCRyvkAk
- *
- */
 class ClientSession {
 
     SelectionKey selkey;
@@ -24,6 +17,8 @@ class ClientSession {
     CharBuffer bufString;
     String clientMessageString = "";
     UserMod user;
+    int id;
+    String username;
 
     ClientSession(SelectionKey selkey, SocketChannel chan) throws Throwable {
         this.user = new UserMod();
@@ -47,34 +42,10 @@ class ClientSession {
         } catch (Throwable t) { /** quietly ignore  */ }
     }
 
-    private void parser(String s){
-        String[] stringPeices = s.split(":", 2);
-
-        if(stringPeices[0].equals("Login")){
-            this.user.get(stringPeices[1]);
-            System.out.println("This is a login");
-        }
-        else if(stringPeices[0].equals("Sign Up")){
-            System.out.println("\nThis is a Sign Up");
-            System.out.println("\n" + this.user.insert(stringPeices[1]));
-
-            if(this.user.insert(stringPeices[1])){
-                this.clientMessageString = "true";
-            }
-            else {
-                this.clientMessageString = "false";
-            }
-
-        }
-        else {
-            System.out.println("\nI need to get the string parsing right");
-        }
-    }
-
     void read() {
 
         try {
-            int amount_read = -1;
+            int amount_read;
 
             try {
                 amount_read = chan.read((ByteBuffer) buf.clear());
@@ -92,19 +63,13 @@ class ClientSession {
                 System.out.println("(ClientSession.java): " + amount_read);
                 System.out.println("(ClientSession.java): compiled string -> " + this.clientMessageString);
 
-                buf.flip();
-                buf = ByteBuffer.wrap(clientMessageString.getBytes());
             }
             catch (Throwable t) {
                 t.printStackTrace();
             }
 
-            System.out.println("sending back " + buf.position() + " bytes");
+            System.out.println("(ClientSession.java): sending back " + buf.position() + " bytes");
 
-            // turn this bus right around and send it back!
-            //buf.flip();
-            chan.write(buf);
-            buf.clear();
         }
         catch (Throwable t) {
             disconnect();
@@ -112,6 +77,53 @@ class ClientSession {
         }
 
 
+    }
+
+    private void parser(String s){
+        String[] stringPeices = s.split(":", 2);
+        String superString = "";
+
+        if(stringPeices[0].equals("Login")){
+
+            ResultSet resultSet = this.user.get(stringPeices[1]);
+            try {
+                resultSet.last();
+                this.username = resultSet.getString("username");
+
+                superString = this.username;
+                buf.flip();
+                buf = ByteBuffer.wrap(superString.getBytes());
+
+                this.chan.write(this.buf);
+                this.buf.clear();
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        else if(stringPeices[0].equals("Sign Up")){
+            System.out.println("\n(ClientSession.java): This is a Sign Up");
+
+            if(this.user.insert(stringPeices[1])){
+                this.clientMessageString = "true";
+            }
+            else {
+                this.clientMessageString = "false";
+            }
+
+        }
+        else if(stringPeices[0].equals("Chat")){
+            System.out.println("\n(ClientSession.java): This is a chat message");
+
+        }
+        else if(stringPeices[0].equals("Update")){
+            this.user.insert(stringPeices[1]);
+        }
+        else {
+            System.out.println("\n(ClientSession.java): I need to get the string parsing right");
+        }
     }
 
 }

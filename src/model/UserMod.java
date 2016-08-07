@@ -60,23 +60,20 @@ public class UserMod {
         }
     }
 
-    public String get(String queryString){
+    public ResultSet get(String queryString){
+
         this.db.sql = null;
+
         try {
             this.db.sql =  this.db.mySql.executeQuery(queryString);
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return this.db.sql.toString();
+        return this.db.sql;
 
     }
 }
-
-
-
-
-
-
 
 
