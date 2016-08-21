@@ -111,6 +111,7 @@ class MainServer {
                         }
 
                     }
+                    iT.remove();
                 }
 
                 sockets.keySet().removeIf(sockets -> !sockets.isOpen());
@@ -120,80 +121,33 @@ class MainServer {
         }
 
         private void write(String string) throws IOException {
-            if(key.isWritable()){
 
-            }
             SocketChannel s = (SocketChannel) key.channel();
-            ByteBuffer buf = sockets.get(s);
+            //this.byteBuffer = sockets.get(s);
 
-            buf = buf.wrap(string.getBytes());
-
-            while(byteBuffer.hasRemaining()){
-                s.write(byteBuffer);
-            }
-            //s.write(buf); // Wont always write everything
-            if (!buf.hasRemaining()) {
-                buf.compact();
-                key.interestOps(SelectionKey.OP_READ);
-            }
+            this.byteBuffer = ByteBuffer.wrap(string.getBytes());
+            s.write(this.byteBuffer);
+            this.byteBuffer.clear();
 
         }
 
         private void read(SelectionKey key) throws IOException {
             System.out.println("Reading ....");
 
-            if(key.isReadable()){
-                System.out.println("The key is readable");
-                SocketChannel s = (SocketChannel) key.channel();
-                s.configureBlocking(false);
-                s.register(key.selector(), SelectionKey.OP_READ);
+            SocketChannel s = (SocketChannel) key.channel();
 
-                if(s.isConnected()){
-                    System.out.println("The key is connected");
-//                    ByteBuffer buf = sockets.get(s);
+            ByteBuffer miniBuf = ByteBuffer.allocate(1024);
+            //miniBuf = sockets.get(s);
 
-                    this.byteBuffer = sockets.get(s);
+            s.read(miniBuf);
+            miniBuf.flip();
+            clientMessageString = new String(miniBuf.array()).trim();
 
-                    if(this.byteBuffer != null){
-                        data = s.read(this.byteBuffer);
+            key.interestOps(SelectionKey.OP_WRITE);
+            System.out.println("MainServer.java -> " + this.clientMessageString);
+            this.parser(this.clientMessageString.trim());
 
-                        if (data == -1) {
-                            s.close();
-                            sockets.remove(s);
-                            System.out.println("The buffer is empty");
-                        }
-
-                        while (this.byteBuffer.hasRemaining()) {
-                            char ch = (char) this.byteBuffer.get();
-                            System.out.print(ch);
-                            clientMessageString += ch;
-                        }
-
-                        this.byteBuffer.flip();
-                        key.interestOps(SelectionKey.OP_WRITE);
-                        System.out.println("MainServer.java -> " + this.clientMessageString);
-                        this.parser(this.clientMessageString.trim());
-
-                    }
-                    else {
-                        System.out.println("The buffer is null");
-                    }
-
-                }
-                else {
-                    System.out.println("This is not connectec, find a way to connect it");
-                }
-
-            }
-            else {
-                System.out.println("The key is not readable");
-            }
-
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            miniBuf.clear();
 
         }
 
@@ -209,11 +163,7 @@ class MainServer {
 
         private void parser(String s) {
             System.out.println("We are inside the parser and holding");
-            try {
-                Thread.sleep(30000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+
             String[] stringPeices = s.split(":", 2);
             String superString = "";
 
@@ -224,16 +174,7 @@ class MainServer {
                     resultSet.last();
                     this.username = resultSet.getString("username");
 
-                    superString = this.username;
-                    byteBuffer.flip();
-                    byteBuffer = ByteBuffer.wrap(superString.getBytes());
-
-                    this.socketChannel.write(this.byteBuffer);
-                    this.byteBuffer.clear();
-
-                    String soap = "This is my test string";
-                    this.socketChannel.write(ByteBuffer.wrap(soap.getBytes()));
-                    this.byteBuffer.flip();
+                    write("Username:" + this.username);
 
                 } catch (SQLException e) {
                     e.printStackTrace();
