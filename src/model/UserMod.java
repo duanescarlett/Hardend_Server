@@ -4,6 +4,7 @@ import model.database.DbConnector;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 /**
  * Created by Duane on 03/07/2016.
@@ -16,26 +17,28 @@ public class UserMod {
         super();
     }
 
-    public ResultSet allUsers(){
+    public ArrayList allUsers(){
+
+        ArrayList<String> arrayList = new ArrayList<String>();
 
         try {
             // 3. Execute SQL query
             db.sql =  this.db.mySql.executeQuery("SELECT * FROM profile");
 
             // 4. Process the result set
-            while(this.db.sql.next()){
-                System.out.println("(UserMod.java): Database operation was successful");
-                System.out.println("Users :> " + this.db.sql.getString("username"));
+
+            while (this.db.sql.next()) {
+                arrayList.add(this.db.sql.getString("username"));
             }
 
-            return this.db.sql;
+            return arrayList;
 
         }
         catch (SQLException e) {
             e.printStackTrace();
-            return this.db.sql = null;
         }
 
+        return arrayList;
     }
 
     public ResultSet user(String id){
@@ -66,6 +69,7 @@ public class UserMod {
 
         try {
             this.db.sql =  this.db.mySql.executeQuery(queryString);
+            //this.db.sql.close();
         }
         catch (SQLException e) {
             e.printStackTrace();
